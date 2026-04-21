@@ -1,5 +1,11 @@
 # YouTube Music Wrapper (macOS)
 
+[한국어](#한국어) · [English](#english)
+
+---
+
+## 한국어
+
 Mac Chrome에서 YouTube Music 재생이 안 되는 이슈를 회피하기 위한 네이티브 macOS 래퍼 앱. Safari 엔진(`WKWebView`)으로 `music.youtube.com`을 띄우고, 미디어키 / 제어 센터 Now Playing / 메뉴바 앱 기능을 제공한다.
 
 ## 설치 (사용자용)
@@ -114,3 +120,122 @@ YouTubeMusicWrapper/
 ## 라이선스 / 면책
 
 비공식 개인 프로젝트. YouTube Music은 Google의 서비스이며, 이 앱은 브라우저 래퍼일 뿐 Google과 무관함.
+
+---
+
+## English
+
+A native macOS wrapper for YouTube Music that works around the Chrome playback issue on Mac. It loads `music.youtube.com` inside Safari's engine (`WKWebView`) and adds macOS media integration: media keys, Control Center "Now Playing" widget, Lock Screen controls, and a menu bar item.
+
+### Install (for users)
+
+#### 1. Download the DMG
+
+Grab the latest `YouTubeMusicWrapper-x.y.z.dmg` from the [Releases](../../releases) page.
+
+#### 2. Open the DMG and drag to Applications
+
+Double-click the DMG, then drag `YouTubeMusicWrapper.app` into your `Applications` folder.
+
+#### 3. Bypass Gatekeeper (first launch only)
+
+This build is **unsigned** (no paid Apple Developer account), so macOS will warn about an "unidentified developer". Use one of the following:
+
+**Option A — Right-click → Open (easiest)**
+
+1. Finder → Applications → right-click `YouTubeMusicWrapper` → **Open**
+2. Click **Open** in the warning dialog
+3. (macOS Sonoma+) Go to System Settings → Privacy & Security → Security section → click **Open Anyway**
+
+Only required once; subsequent launches are a normal double-click.
+
+**Option B — Terminal (removes the quarantine attribute)**
+
+```
+xattr -d com.apple.quarantine /Applications/YouTubeMusicWrapper.app
+```
+
+Then launch normally.
+
+#### "The app is damaged" error
+
+That's the quarantine flag. Run the Option B command above to fix it.
+
+---
+
+### For developers
+
+#### Requirements
+
+- macOS 13.0 (Ventura) or later
+- Xcode 16.4 or later
+
+#### Build & run in Xcode
+
+```
+open YouTubeMusicWrapper.xcodeproj
+```
+
+Press ⌘R.
+
+#### Command-line build
+
+```
+xcodebuild -project YouTubeMusicWrapper.xcodeproj \
+  -scheme YouTubeMusicWrapper \
+  -configuration Debug build \
+  CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+```
+
+#### Build a distributable DMG
+
+```
+./scripts/build-dmg.sh
+```
+
+Produces `dist/YouTubeMusicWrapper-<version>.dmg` (ad-hoc signed, unnotarized).
+
+### Project structure
+
+```
+YouTubeMusicWrapper/
+├── YouTubeMusicWrapperApp.swift   # @main, SwiftUI App
+├── AppDelegate.swift              # Managers, PlaybackState
+├── ContentView.swift              # Root view hosting the WebView
+├── WebView/
+│   ├── YouTubeMusicWebView.swift  # NSViewRepresentable + WKWebView + nav delegate
+│   └── WebViewBridge.swift        # WKScriptMessageHandler (JS → Swift)
+├── Playback/
+│   ├── TrackInfo.swift            # Track model
+│   ├── NowPlayingManager.swift    # MPNowPlayingInfoCenter
+│   └── RemoteCommandManager.swift # MPRemoteCommandCenter → WebView controls
+├── MenuBar/
+│   └── StatusItemController.swift # NSStatusItem + NSMenu
+├── Resources/
+│   └── injected.js                # DOM observation / playback control shim
+└── Assets.xcassets                # Icon, accent color
+```
+
+### How it works
+
+1. `WKWebView` loads `music.youtube.com`; login cookies persist in `WKWebsiteDataStore.default()`
+2. `injected.js` watches the `<video>` element and `ytmusic-player-bar`, posting state to Swift via `webkit.messageHandlers`
+3. `WebViewBridge` decodes the payload into a `TrackInfo` and pushes it into `PlaybackState.currentTrack`
+4. `NowPlayingManager` mirrors that into `MPNowPlayingInfoCenter` (artwork fetched async and cached when the URL changes)
+5. Media-key / Control-Center input is handled by `MPRemoteCommandCenter` and forwarded back to the page via `evaluateJavaScript("window.__ymw.play()")` etc.
+6. `NSStatusItem` menu bar entry shows the current track and transport controls
+7. A navigation delegate catches drifts to `youtube.com` and bounces back to `music.youtube.com`
+
+### Known limitations
+
+- **Unsigned / unnotarized**: first launch requires the Gatekeeper bypass above
+- **YouTube Music DOM changes can break track info**: all selectors are centralized in `Resources/injected.js` — edit in one place
+- **No App Sandbox**
+
+### Intentionally out of scope
+
+Global hotkeys, plugins, themes, custom mini-player UI, Discord/Last.fm integrations, auto-update.
+
+### License / disclaimer
+
+Unofficial personal project. YouTube Music is a Google service; this app is merely a browser wrapper and is not affiliated with Google.
