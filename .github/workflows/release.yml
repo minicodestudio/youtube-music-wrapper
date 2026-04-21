@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      - name: Show versions
+        run: |
+          xcodebuild -version
+          sw_vers
+
+      - name: Build DMG
+        id: build
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ./scripts/build-dmg.sh "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dmg=dist/YouTubeMusicWrapper-${VERSION}.dmg" >> "$GITHUB_OUTPUT"
+
+      - name: Compute checksum
+        id: checksum
+        run: |
+          SHA=$(shasum -a 256 "${{ steps.build.outputs.dmg }}" | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.build.outputs.dmg }}
+          name: v${{ steps.build.outputs.version }}
+          body: |
+            ### YouTube Music Wrapper v${{ steps.build.outputs.version }}
+
+            Unsigned ad-hoc build. See the README for Gatekeeper bypass instructions.
+
+            **SHA-256**: `${{ steps.checksum.outputs.sha256 }}`
+          draft: false
+          prerelease: false

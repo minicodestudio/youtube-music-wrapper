@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+._*
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+*.xccheckout
+*.moved-aside
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+.build/
+
+# CocoaPods / Carthage (not used here, just in case)
+Pods/
+Carthage/Build/
+
+# fastlane
+fastlane/report.xml
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Build artifacts
+dist/
+*.dmg
+*.zip
+*.app
+
+# Editor / env
+.vscode/
+.idea/
+.env
+.env.local
